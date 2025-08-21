@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chip-fusion Groove Quartet — Random Scoring Prompt Generator</title>
+
+  <!-- Vue.js -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <!-- Pico.css -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+
+  <!-- Font Awesome (v6) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+
+  <style>
+    :root {
+       --spacing-xs: .5rem; 
+    }
+    body { 
+        font-size:14px; 
+    }
+    .instrument-card {
+        margin: var(--spacing-xs); 
+    }
+
+    .reroll-btn { 
+      all:unset; 
+      cursor: pointer; 
+      width: 1.5rem; 
+      height: 1.5rem; 
+      border-radius: var(--pico-border-radius);
+      display:flex; 
+      align-items:center; 
+      justify-content: center;
+    }
+
+    .reroll-btn:hover{
+      background: var(--pico-background-color); 
+      color: var(--pico-color); 
+    }
+
+    .roles-row { 
+      text-transform: capitalize;
+      display: flex;
+      justify-content: space-between;
+      align-items:center;
+      gap:.5rem; 
+    }
+
+    header h1, header h3 { 
+      margin: 0; 
+    }
+
+  </style>
+</head>
+
+<body>
+  <main id="app" class="container" style="margin-top: 2rem ">
+    <section aria-labelledby="page-title">
+      <div style="display: flex; flex-direction: column; align-items: center; gap:.25rem;">
+        <h1 id="page-title">Random Scoring Prompt Generator</h1>
+        <h3>Chip-fusion Groove Quartet Edition</h3>
+        <button @click="randomizeRoles(Object.values(lineup))" aria-label="Randomize all roles">
+          <i class="fa-solid fa-dice fa-lg" aria-hidden="true"></i>
+          &nbsp;Randomize
+        </button>
+      </div>
+    </section>
+
+    <article id="lineup">
+      <header><h2>Roles Distribution</h2></header>
+
+      <main class="grid">
+        <article v-for="(instrument, key) in lineup" :key="key" class="instrument-card">
+          <header style="display: flex; flex-direction: column; align-items: center;">
+            <p>
+              <img :src="`icons/${instrument.icon}.png`" :alt="`${instrument.name} icon`" width="48" height="48" aria-hidden="true" />
+            </p>
+            <strong>{{ instrument.name }}</strong>
+          </header>
+          <div class="roles-row">
+            <span>{{ instrument.role?.value ?? 'rest' }}</span>
+            <button class="reroll-btn" @click="instrument.role.reroll()" :aria-label="`Reroll ${instrument.name}`" title="Reroll role">
+              <i class="fa-solid fa-dice fa-lg" aria-hidden="true"></i>
+            </button>
+          </div>
+        </article>
+      </main>
+    </article>
+
+    <article id="credits">
+      <header><h2>Credits</h2></header>
+      <main>
+        <ul>
+          <li><a href="https://vuejs.org/">Vue</a></li>
+          <li><a href="https://fontawesome.com/">Font Awesome</a></li>
+          <li><a href="https://picocss.com/">Pico.css</a></li>
+          <li>Icons made by <a href="https://www.flaticon.com/authors/smashicons" title="Smashicons">Smashicons</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></li>
+          <li>Icons made by <a href="https://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></li>
+          <li>Icons made by <a href="https://www.flaticon.com/authors/muh-zakaria" title="muh zakaria">muh zakaria</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></li>
+        </ul>
+      </main>
+    </article>
+  </main> <!-- /app-->
+
+  <script>
+    const { createApp } = Vue;
+
+    function pickRandomProperty(obj){
+      const entries = Object.entries(obj).filter(([_, r]) => typeof r?.weight === 'number' && r.weight > 0);
+      const total = entries.reduce((s, [_, r]) => s + r.weight, 0);
+      if (total <= 0) return null;
+      let index = Math.random() * total;
+      for (const [key, r] of entries) {
+        if (index < r.weight) return key;
+        index -= r.weight;
+      }
+      return null;
+    }
+
+    class Role { constructor(name, weight = 0) { this.name = name; this.weight = Number(weight) || 0; } }
+
+    class ActiveRole {
+      constructor(parent) {
+        this.parent = parent;
+        this.value = pickRandomProperty(this.parent.roles) ?? 'rest';
+      }
+      reroll(){ this.value = pickRandomProperty(this.parent.roles) ?? 'rest'; }
+    }
+
+    class Roles {
+      constructor() {
+        const roles=[ 'rest','bass','rhythm','harmony','countermelody','melody','doubling','fills','improv','color' ];
+        roles.forEach(role=> { this[role] = new Role(role, role === 'rest' ? 1 : 0); });
+      }
+      add(...roles){
+        roles.forEach(role => {
+          if (typeof role === 'string') { if (this[role] && typeof this[role].weight === 'number') this[role].weight = 1; return; }
+          if (role && typeof role === 'object' && !Array.isArray(role)) {
+            for (const [name, weight] of Object.entries(role)) { if (this[name]) this[name].weight = Number(weight) || 0; }
+          }
+        });
+      }
+      remove(...roles){ roles.forEach(role => { if (typeof role === 'string' && this[role] && this[role].weight != null) this[role].weight = 0; }); }
+    }
+
+    class Instrument {
+      constructor({name, icon}) { this.name = name; this.icon = icon; this.roles = new Roles(); }
+    }
+
+    const lineup = {
+      melodica:  new Instrument({name: 'MIDI Melodica (Upper)', icon: 'melodica-01'}),
+      keyboard:  new Instrument({name: 'MIDI Keyboard (Lower)', icon: 'keyboard-01'}),
+      alto:      new Instrument({name: 'Alto Electric Guitar', icon: 'alto-01'}),
+      baritone:  new Instrument({name: 'Baritone Electric Guitar', icon: 'baritone-01'}),
+      percussion:new Instrument({name: 'Cajón & Percussion', icon: 'percussion-01'})
+    };
+
+    // Weights
+    lineup.melodica.roles.add({melody:2}, 'doubling', 'countermelody', 'improv');
+    lineup.keyboard.roles.add({harmony: 2}, 'rhythm', 'bass', 'doubling', 'fills');
+    lineup.baritone.roles.add({bass: 2}, {rhythm: 2}, 'harmony', 'melody', 'fills', 'improv');
+    lineup.alto.roles.add('melody', {countermelody: 2}, 'harmony', 'rhythm', 'improv', 'doubling', 'color', {fills: 2});
+    lineup.percussion.roles.add({rhythm: 2}, 'doubling', 'fills');
+
+    function randomizeRoles(instruments){
+      for (const instrument of instruments) {
+        if (!instrument.role) {
+          instrument.role = new ActiveRole(instrument);
+        } else {
+          instrument.role.reroll();
+        }
+      }
+    }
+
+    // Initialize with random roles
+    randomizeRoles(Object.values(lineup));
+
+    createApp({
+      data(){ return { lineup, randomizeRoles }; }
+    }).mount('#app');
+  </script>
+</body>
+</html>
