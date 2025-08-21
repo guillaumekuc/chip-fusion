@@ -48,7 +48,8 @@ for Melodica Controller, Electric Guitars & Percussion
 
 ### Random Scoring Prompt Generator
 
-A scoring session starter utility: generate random prompts to guide the scoring proces
+A scoring session starter utility: generate random prompts to guide the scoring process
+
 Built w/ Vue.js & Pico.css
 
 @todo:
