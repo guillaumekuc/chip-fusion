@@ -44,3 +44,15 @@ for Melodica Controller, Electric Guitars & Percussion
 	- Shaker
 	- Castanets/Woodblocks
 
+## Tools
+
+### Random Scoring Prompt Generator
+
+A scoring session starter utility: generate random prompts to guide the scoring proces
+Built w/ Vue.js & Pico.css
+
+@todo:
+- [x] Randomly attribute roles to instruments
+- [ ] Euclidian rhythms generator
+- [ ] etc
+
